@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <!-- <h1>Hi, {{ user.username }}!</h1> -->
+    <!-- <h1>Hi, {{ current_user.id }}!</h1> -->
 
-    <!-- {{ cf }} -->
     <div class="container">
         <div class="row">
             <div class="col">
                 <h1 class="text-center">Dashboard</h1>
-                <p>Zones: {{ cf.zones_count }}</p>
+                <p>{{ 'Zones: ' if session['account_id'] }}{{ cf.zones_count }}</p>
+                <!-- <p>Zones: {{ cf.zones_count }}</p> -->
             </div>
         </div>
     </div>

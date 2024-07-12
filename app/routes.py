@@ -1,14 +1,19 @@
 import pprint
 from flask import render_template, flash, redirect, url_for, session, request
+from flask_login import current_user, login_user, logout_user, login_required
 from app import app
+from app.models import User
 from app.forms import LoginForm, ApiTokenForm, Ipv4ToIpv6Form
 from app.cloudflare_api import check_authorization
+from app.models import User
+
+users = {'test': {'password': 'test'}}
 
 
 @app.route('/')
 @app.route('/index')
+@login_required
 def index():
-    user = {'username': 'Miguel'}
     form = Ipv4ToIpv6Form()
 
     app.logger.debug(f'api_token: {session.get('api_token')}')
@@ -39,7 +44,6 @@ def index():
                 }
             )
 
-            # pprint.pprint(client.dns.records.list(zone_id=zone_id).to_dict())
             zone_dns_records_list = client.dns.records.list(zone_id=zone_id).to_dict()
             cloudflare_info['zones'][-1]['dns_count'] = zone_dns_records_list['result_info']['total_count']
 
@@ -55,9 +59,6 @@ def index():
                     }
                 )
 
-        # pprint.pprint(zones_list)
-        # pprint.pprint(cloudflare_info)
-
     else:
         flash('Authorization failed. Please, check Cloudflare API Token.')
 
@@ -65,23 +66,42 @@ def index():
             'api_token': cf_api_token,
         }
 
-    return render_template('index.html', title='Home', user=user, cf=cloudflare_info, form=form)
+    return render_template('index.html', title='Dashboard', cf=cloudflare_info, form=form)
 
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('api_token'))
+
     form = LoginForm()
 
     if form.validate_on_submit():
-        flash('Login requested for user {}, remember_me={}'.format(
-            form.username.data, form.remember_me.data))
+        username = form.username.data
+        if username in users and users[username]['password'] == form.password.data:
+            user = User()
+            user.id = username
+            login_user(user, remember=form.remember_me.data)
 
-        return redirect(url_for('index'))
+            return redirect(url_for('api_token'))
+        else:
+            flash('Invalid username or password')
+            return redirect(url_for('login'))
 
     return render_template('login.html', title='Sign In', form=form)
 
 
+@app.route('/logout')
+def logout():
+    session.pop('api_token', None)
+    session.pop('account_id', None)
+    session.pop('account_name', None)
+    logout_user()
+    return redirect(url_for('login'))
+
+
 @app.route('/api_token', methods=['GET', 'POST'])
+@login_required
 def api_token():
     form = ApiTokenForm()
 
@@ -93,15 +113,19 @@ def api_token():
     #     flash('Session expired. Please, try again or refresh page.')
     #     redirect(url_for('api_token'))
 
-    app.logger.debug(f'api_token: {session.get('api_token')}')
-    client = check_authorization(session.get('api_token'))
-    app.logger.debug(f'client: {client}')
+        app.logger.debug(f'api_token: {session.get('api_token')}')
+        client = check_authorization(session.get('api_token'))
+        app.logger.debug(f'client: {client}')
 
-    if client:
-        # session['client'] = client
-        pass
-    else:
-        flash('Authorization failed. Please, check Cloudflare API Token.')
+        if client:
+            account_id = client.accounts.list().to_dict()['result'][0]['id']
+            account_name = client.accounts.list().to_dict()['result'][0]['name']
+            session['account_id'] = account_id
+            session['account_name'] = account_name
+            print(f'Account ID: {account_id}, {account_name}')
+            # session['client'] = client
+        else:
+            flash('Authorization failed. Please, check Cloudflare API Token.')
 
     if session.get('api_token') and session.get('api_token') is not None:
         app.logger.debug(f'api_token: {session['api_token']}')
