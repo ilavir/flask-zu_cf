@@ -2,7 +2,25 @@
 
 {% block content %}
     <h1>Hi, {{ user.username }}!</h1>
+
+    <!-- {{ cf }} -->
+    <p>Zones: {{ cf.zones_count }}</p>
+
+    {% for zone in cf.zones %}
+    <h3>{{ zone.name }}</h3>
     <ul>
-        <li>API Token: {{ cf.api_token }}</li>
+        <li><strong>Security level</strong>: <a href="{{ url_for('change_zone_security_level', zone_id=zone.id) }}">{{ zone.security_level }}</a></li>
+        <li><strong>DNS records: {{ zone.dns_count }}</strong></li>
+        <ul>
+            {% for dns in zone.dns %}
+                <li>{{ dns.type }} | {{ dns.name }} | {{ dns.content }} | Proxied: <a href="{{ url_for('change_dns_proxied', zone_id=zone.id, dns_id=dns.id) }}">{{ dns.proxied }}</a></li>
+            {% endfor %}
+        </ul>
     </ul>
+    <h3>Copy IPv4 A records to IPv6 AAAA records</h3>
+    <label for="ipv6_address">IPv6 address</label>
+    <input id="ipv6_address" name="ipv6_address" required="" size="32" type="text" value="">
+
+    <button>COPY</button>
+    {% endfor %}
 {% endblock %}

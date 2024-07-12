@@ -2,12 +2,20 @@
 
 {% block content %}
     <h1>Cloudflare API Token</h1>
+    <div>API Token: {{ api_token }}</div><br>
 
     <form action="" method="post" novalidate>
         {{ form.hidden_tag() }}
         <p>
             {{ form.api_token.label }}<br>
-            {{ form.api_token(size=32, value=api_token) }}<br>
+
+            {% if api_token %}
+                <!-- {{ form.api_token(size=32, value=api_token) }}<br> -->
+                {{ form.api_token(size=32, value="") }}<br>
+            {% else %}
+                {{ form.api_token(size=32) }}<br>
+            {% endif %}
+
             {% for error in form.api_token.errors %}
             <span style="color: red;">[{{ error }}]</span>
             {% endfor %}
