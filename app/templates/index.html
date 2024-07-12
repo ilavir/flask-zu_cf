@@ -1,26 +1,73 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Hi, {{ user.username }}!</h1>
+    <!-- <h1>Hi, {{ user.username }}!</h1> -->
 
     <!-- {{ cf }} -->
-    <p>Zones: {{ cf.zones_count }}</p>
+    <div class="container">
+        <div class="row">
+            <div class="col">
+                <h1 class="text-center">Dashboard</h1>
+                <p>Zones: {{ cf.zones_count }}</p>
+            </div>
+        </div>
+    </div>
 
     {% for zone in cf.zones %}
-    <h3>{{ zone.name }}</h3>
-    <ul>
-        <li><strong>Security level</strong>: <a href="{{ url_for('change_zone_security_level', zone_id=zone.id) }}">{{ zone.security_level }}</a></li>
-        <li><strong>DNS records: {{ zone.dns_count }}</strong></li>
-        <ul>
-            {% for dns in zone.dns %}
-                <li>{{ dns.type }} | {{ dns.name }} | {{ dns.content }} | Proxied: <a href="{{ url_for('change_dns_proxied', zone_id=zone.id, dns_id=dns.id) }}">{{ dns.proxied }}</a></li>
-            {% endfor %}
-        </ul>
-    </ul>
-    <h3>Copy IPv4 A records to IPv6 AAAA records</h3>
-    <label for="ipv6_address">IPv6 address</label>
-    <input id="ipv6_address" name="ipv6_address" required="" size="32" type="text" value="">
+    <div class="container">
+        <div class="row">
+            <div class="col">
+                <h2>{{ zone.name }}</h2>
+            </div>
+            <div class="col text-end">
+                <strong>Security level</strong>: <a href="{{ url_for('change_zone_security_level', zone_id=zone.id) }}">{{ zone.security_level }}</a>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="row">
+            <div class="col">
+                <strong>DNS records: {{ zone.dns_count }}</strong>
 
-    <button>COPY</button>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Name</th>
+                            <th>Content</th>
+                            <th>Proxied</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dns in zone.dns %}
+                        <tr>
+                            <td>{{ dns.type }}</td>
+                            <td>{{ dns.name }}</td>
+                            <td>{{ dns.content }}</td>
+                            <td><a href="{{ url_for('change_dns_proxied', dns_record_id=dns.id, zone_id=zone.id, content=dns.content, name=dns.name, type=dns.type) }}">{{ dns.proxied }}</a></td>
+                            <td><a href="{{ url_for('dns_record_delete', dns_record_id=dns.id, zone_id=zone.id, name=dns.name, type=dns.type) }}"><button class="btn btn-sm btn-danger">Delete</button></a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="row">
+            <div class="col">
+                <form action="{{ url_for('copy_dns_a_to_aaaa') }}" method="post">
+                    <input id="zone_id" name="zone_id" type="hidden" value="{{ zone.id }}">
+                    {{ form.hidden_tag() }}
+
+                    {{ form.ipv6_address.label }}
+                    {{ form.ipv6_address(size=32) }}
+                    {{ form.submit(class="btn btn-success") }}
+                </form>
+            </div>
+        </div>
+    </div>
     {% endfor %}
+
 {% endblock %}

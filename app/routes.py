@@ -1,7 +1,7 @@
 import pprint
 from flask import render_template, flash, redirect, url_for, session, request
 from app import app
-from app.forms import LoginForm, ApiTokenForm
+from app.forms import LoginForm, ApiTokenForm, Ipv4ToIpv6Form
 from app.cloudflare_api import check_authorization
 
 
@@ -9,6 +9,7 @@ from app.cloudflare_api import check_authorization
 @app.route('/index')
 def index():
     user = {'username': 'Miguel'}
+    form = Ipv4ToIpv6Form()
 
     app.logger.debug(f'api_token: {session.get('api_token')}')
     client = check_authorization(session.get('api_token'))
@@ -28,7 +29,6 @@ def index():
             zone_id = zone['id']
             zone_name = zone['name']
             zone_security_level = client.zones.settings.security_level.get(zone_id=zone_id).to_dict().get('value')
-            print(zone_security_level)
 
             cloudflare_info['zones'].append(
                 {
@@ -39,7 +39,7 @@ def index():
                 }
             )
 
-            pprint.pprint(client.dns.records.list(zone_id=zone_id).to_dict())
+            # pprint.pprint(client.dns.records.list(zone_id=zone_id).to_dict())
             zone_dns_records_list = client.dns.records.list(zone_id=zone_id).to_dict()
             cloudflare_info['zones'][-1]['dns_count'] = zone_dns_records_list['result_info']['total_count']
 
@@ -55,8 +55,8 @@ def index():
                     }
                 )
 
-        pprint.pprint(zones_list)
-        pprint.pprint(cloudflare_info)
+        # pprint.pprint(zones_list)
+        # pprint.pprint(cloudflare_info)
 
     else:
         flash('Authorization failed. Please, check Cloudflare API Token.')
@@ -65,7 +65,7 @@ def index():
             'api_token': cf_api_token,
         }
 
-    return render_template('index.html', title='Home', user=user, cf=cloudflare_info)
+    return render_template('index.html', title='Home', user=user, cf=cloudflare_info, form=form)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -114,10 +114,99 @@ def api_token():
 
 @app.route('/_change_zone_security_level/<zone_id>')
 def change_zone_security_level(zone_id):
-    # zone_id = request.args.get('zone_id')
-    return zone_id
+    client = check_authorization(session.get('api_token'))
+
+    if client:
+        try:
+            response = client.zones.settings.security_level.edit(zone_id=zone_id, value='essentially_off')
+            print(response)
+            message = {'status': 'SUCCESS!', 'message': 'Zone security level was changed to "essentially_off"'}
+        except Exception as e:
+            message = {'status': 'ERROR!', 'message': e}
+        finally:
+            return render_template('response.html', message=message)
+    else:
+        flash('Authorization failed. Please, check Cloudflare API Token.')
+        return redirect(url_for('api_token'))
 
 
-@app.route('/_change_dns_proxied')
-def change_dns_proxied():
-    return 'OK'
+@app.route('/_change_dns_proxied/<dns_record_id>')
+def change_dns_proxied(dns_record_id):
+    zone_id = request.args.get('zone_id')
+    content = request.args.get('content')
+    name = request.args.get('name')
+    type = request.args.get('type')
+
+    client = check_authorization(session.get('api_token'))
+
+    if client:
+        try:
+            response = client.dns.records.update(dns_record_id=dns_record_id, zone_id=zone_id, content=content, name=name, type=type, proxied=True)
+            print(response)
+            message = {'status': 'SUCCESS!', 'message': f'DNS record {type} "{name}" Proxied status was changed to "True"'}
+        except Exception as e:
+            print(e)
+            message = {'status': 'ERROR!', 'message': e}
+        finally:
+            return render_template('response.html', message=message)
+    else:
+        flash('Authorization failed. Please, check Cloudflare API Token.')
+        return redirect(url_for('api_token'))
+
+
+@app.route('/_copy_dns_a_to_aaaa', methods=['POST'])
+def copy_dns_a_to_aaaa():
+    form = Ipv4ToIpv6Form()
+
+    if form.validate_on_submit():
+        zone_id = request.form.get('zone_id')
+        ipv6_address = request.form.get('ipv6_address')
+        print(zone_id, ipv6_address)
+
+        client = check_authorization(session.get('api_token'))
+        if client:
+            try:
+                zone_dns_records_list = client.dns.records.list(zone_id=zone_id).to_dict()
+
+                for dns_record in zone_dns_records_list['result']:
+                    if dns_record['type'] == 'A':
+                        client.dns.records.create(zone_id=zone_id, content=ipv6_address, name=dns_record['name'], type='AAAA', proxied=True)
+
+                message = {'status': 'SUCCESS!', 'message': f'IPv4 to IPv6 was copied successfully'}
+            except Exception as e:
+                print(e)
+                message = {'status': 'ERROR!', 'message': e}
+            finally:
+                return render_template('response.html', message=message)
+
+        else:
+            flash('Authorization failed. Please, check Cloudflare API Token.')
+            return redirect(url_for('api_token'))
+
+    else:
+        flash('Form data is invalid. Please, check form data.')
+        return redirect(url_for('index'))
+
+
+@app.route('/_dns_record_delete')
+def dns_record_delete():
+    zone_id = request.args.get('zone_id')
+    dns_record_id = request.args.get('dns_record_id')
+    name = request.args.get('name')
+    type = request.args.get('type')
+
+    client = check_authorization(session.get('api_token'))
+
+    if client:
+        try:
+            response = client.dns.records.delete(zone_id=zone_id, dns_record_id=dns_record_id)
+            print(response)
+            message = {'status': 'SUCCESS!', 'message': f'DNS record {type} "{name}" was deleted'}
+        except Exception as e:
+            print(e)
+            message = {'status': 'ERROR!', 'message': e}
+        finally:
+            return render_template('response.html', message=message)
+    else:
+        flash('Authorization failed. Please, check Cloudflare API Token.')
+        return redirect(url_for('api_token'))

@@ -4,6 +4,6 @@ from config import Config
 
 app = Flask(__name__)
 app.config.from_object(Config)
-login = LoginManager(app)
+# login = LoginManager(app)
 
 from app import routes, models

@@ -13,3 +13,8 @@ class LoginForm(FlaskForm):
 class ApiTokenForm(FlaskForm):
     api_token = StringField('API Token', validators=[DataRequired()])
     submit = SubmitField('Save')
+
+
+class Ipv4ToIpv6Form(FlaskForm):
+    ipv6_address = StringField('IPv6 Address', validators=[DataRequired()])
+    submit = SubmitField('COPY IPv4 to IPv6')

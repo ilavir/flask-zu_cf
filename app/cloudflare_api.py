@@ -33,8 +33,8 @@ def check_authorization(api_token):
             account_name = accounts_list.to_dict()['result'][0]['name']
             app.logger.info(f'Account ID: {account_id}')
             app.logger.info(f'Account Name: {account_name}')
-            flash(f'Account ID: {account_id}')
-            flash(f'Account Name: {account_name}')
+            # flash(f'Account ID: {account_id}')
+            # flash(f'Account Name: {account_name}')
         else:
             print('Authorization failed')
 
