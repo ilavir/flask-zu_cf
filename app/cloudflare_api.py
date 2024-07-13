@@ -25,17 +25,13 @@ def check_authorization(api_token):
 
         if response.status_code == 200:
             app.logger.info('Authorization successful')
-            # print(response.json())
-            # print(client.accounts.list().to_json())
             accounts_list = client.accounts.list()
             account_id = accounts_list.to_dict()['result'][0]['id']
             account_name = accounts_list.to_dict()['result'][0]['name']
-            app.logger.info(f'Account ID: {account_id}')
-            app.logger.info(f'Account Name: {account_name}')
-            # flash(f'Account ID: {account_id}')
-            # flash(f'Account Name: {account_name}')
+            app.logger.debug(f'Account ID: {account_id}')
+            app.logger.debug(f'Account Name: {account_name}')
         else:
-            print('Authorization failed')
+            app.logger.warning('Authorization failed')
 
             return False
 

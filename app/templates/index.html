@@ -20,7 +20,8 @@
                 <h2>{{ zone.name }}</h2>
             </div>
             <div class="col text-end">
-                <strong>Security level</strong>: <a href="{{ url_for('change_zone_security_level', zone_id=zone.id) }}">{{ zone.security_level }}</a>
+                <strong>Security level</strong>: <a href="{{ url_for('change_zone_security_level', zone_id=zone.id, zone_name=zone.name) }}">{{ zone.security_level }}</a><br>
+                <strong>IPv6</strong>: <a href="{{ url_for('change_zone_ipv6', zone_id=zone.id, zone_name=zone.name) }}">{{ zone.ipv6 }}</a>
             </div>
         </div>
     </div>
