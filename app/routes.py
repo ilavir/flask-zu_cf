@@ -43,7 +43,7 @@ def logout():
 @app.route('/api_token', methods=['GET', 'POST'])
 @login_required
 def api_token():
-    app.logger.debug(app.config['SECRET_KEY'])
+    # app.logger.debug(app.config['SECRET_KEY'])
     form = ApiTokenForm()
 
     if request.method == 'POST':
