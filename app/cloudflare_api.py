@@ -142,3 +142,29 @@ def api_zones_settings_security_level_edit(client, zone_id):
         messages.append({'status': 'ERROR', 'message': e})
 
     return response, messages
+
+
+def api_dns_records_create_ipv4_to_ipv6_duplicate(client, zone_id, ipv6_address):
+    # messages for showing errors in response template
+    messages = []
+    # request DNS records list for Zone
+    zone_dns_records_list = client.dns.records.list(zone_id=zone_id).to_dict()
+
+    # iterate for DNS records within Zone
+    for dns_record in zone_dns_records_list['result']:
+
+        # check DNS record type is 'A' type
+        if dns_record['type'] == 'A':
+            try:
+                # create AAAA DNS record
+                response = client.dns.records.create(zone_id=zone_id, content=ipv6_address, name=dns_record['name'], type='AAAA', proxied=True)
+                app.logger.debug(response)
+                # append response message to messages list
+                messages.append({'status': 'SUCCESS', 'message': f'DNS {dns_record["type"]} record "{dns_record["name"]}" was copied to AAAA IPv6 record'})
+            except Exception as e:
+                # get error response
+                response = e
+                # append response message to messages list
+                messages.append({'status': 'ERROR', 'message': e})
+
+    return response, messages

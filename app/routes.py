@@ -4,7 +4,7 @@ from flask_login import current_user, login_user, logout_user, login_required
 from app import app
 from app.models import User
 from app.forms import LoginForm, ApiTokenForm, Ipv4ToIpv6Form
-from app.cloudflare_api import check_authorization, api_dns_records_delete, api_dns_records_edit_proxied, api_zones_settings_ipv6_edit, api_zones_settings_security_level_edit
+from app.cloudflare_api import check_authorization, api_dns_records_delete, api_dns_records_edit_proxied, api_zones_settings_ipv6_edit, api_zones_settings_security_level_edit, api_dns_records_create_ipv4_to_ipv6_duplicate
 
 users = {'test': {'password': 'test'}}
 
@@ -209,24 +209,11 @@ def copy_dns_a_to_aaaa():
         client = check_authorization(session.get('api_token'))
 
         if client:
-            messages = []
-            # request DNS records list for Zone
-            zone_dns_records_list = client.dns.records.list(zone_id=zone_id).to_dict()
-
-            # iterate for DNS records within Zone
-            for dns_record in zone_dns_records_list['result']:
-
-                if dns_record['type'] == 'A':
-                    try:
-                        response = client.dns.records.create(zone_id=zone_id, content=ipv6_address, name=dns_record['name'], type='AAAA', proxied=True)
-                        app.logger.debug(response)
-                        messages.append({'status': 'SUCCESS', 'message': f'DNS {dns_record["type"]} record "{dns_record["name"]}" was copied to AAAA IPv6 record'})
-                    except Exception as e:
-                        app.logger.debug(e)
-                        messages.append({'status': 'ERROR', 'message': e})
+            # copy existing 'A' DNS records to 'AAAA' records
+            response, messages = api_dns_records_create_ipv4_to_ipv6_duplicate(client, zone_id, ipv6_address)
+            app.logger.debug(response)
 
             return render_template('response.html', messages=messages)
-
         else:
             flash('Authorization failed. Please, check Cloudflare API Token.')
             return redirect(url_for('api_token'))
