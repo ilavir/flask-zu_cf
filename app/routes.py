@@ -4,8 +4,7 @@ from flask_login import current_user, login_user, logout_user, login_required
 from app import app
 from app.models import User
 from app.forms import LoginForm, ApiTokenForm, Ipv4ToIpv6Form
-from app.cloudflare_api import check_authorization
-from app.models import User
+from app.cloudflare_api import check_authorization, api_dns_records_delete, api_dns_records_edit_proxied, api_zones_settings_ipv6_edit, api_zones_settings_security_level_edit
 
 users = {'test': {'password': 'test'}}
 
@@ -44,33 +43,35 @@ def logout():
 @app.route('/api_token', methods=['GET', 'POST'])
 @login_required
 def api_token():
+    app.logger.debug(app.config['SECRET_KEY'])
     form = ApiTokenForm()
 
-    if form.validate_on_submit():
-        session['api_token'] = form.api_token.data
-        app.logger.debug(f'api_token: {session.get('api_token')}')
-        flash('API Token saved: {}'.format(form.api_token.data))
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            session['api_token'] = form.api_token.data
+            app.logger.debug(f'api_token: {session.get('api_token')}')
+            flash('API Token saved: {}'.format(form.api_token.data))
 
-        app.logger.debug(f'api_token: {session.get('api_token')}')
-        client = check_authorization(session.get('api_token'))
-        # app.logger.debug(f'client: {client}')
+            app.logger.debug(f'api_token: {session.get('api_token')}')
+            client = check_authorization(session.get('api_token'))
+            # app.logger.debug(f'client: {client}')
 
-        if client:
-            account_id = client.accounts.list().to_dict()['result'][0]['id']
-            account_name = client.accounts.list().to_dict()['result'][0]['name']
-            session['account_id'] = account_id
-            session['account_name'] = account_name
-            app.logger.debug(f'Account ID: {account_id}, {account_name}')
+            if client:
+                account_id = client.accounts.list().to_dict()['result'][0]['id']
+                account_name = client.accounts.list().to_dict()['result'][0]['name']
+                session['account_id'] = account_id
+                session['account_name'] = account_name
+                app.logger.debug(f'Account ID: {account_id}, {account_name}')
+            else:
+                flash('Authorization failed. Please, check Cloudflare API Token.')
         else:
-            flash('Authorization failed. Please, check Cloudflare API Token.')
+            flash('Form data is invalid. Please, check form data.')
 
-        if session.get('api_token') and session.get('api_token') is not None:
-            app.logger.debug(f'api_token: {session['api_token']}')
-            cf_api_token = session['api_token']
-        else:
-            cf_api_token = None
+    if session.get('api_token') and session.get('api_token') is not None:
+        app.logger.debug(f'api_token: {session['api_token']}')
+        cf_api_token = session['api_token']
     else:
-        flash('Form data is invalid. Please, check form data.')
+        cf_api_token = None
 
     return render_template('api_token.html', title='API Token', form=form, api_token=cf_api_token)
 
@@ -104,7 +105,7 @@ def index():
             zone_name = zone['name']
             zone_security_level = client.zones.settings.security_level.get(zone_id=zone_id).to_dict().get('value')
             zone_ipv6 = client.zones.settings.ipv6.get(zone_id=zone_id).to_dict().get('value')
-            pprint.pprint(zone_ipv6)
+            # pprint.pprint(zone_ipv6)
 
             # add info to dict for dashboard template
             cloudflare_info['zones'].append(
@@ -147,22 +148,15 @@ def index():
 
 @app.route('/_change_zone_security_level/<zone_id>')
 def change_zone_security_level(zone_id):
-    zone_name = request.args.get('zone_name')
-
     # check for CF authorization with API Token saved into session
     client = check_authorization(session.get('api_token'))
 
     if client:
-        messages = []
+        # update DNS record proxied
+        response, messages = api_zones_settings_security_level_edit(client, zone_id)
+        app.logger.debug(response)
 
-        try:
-            response = client.zones.settings.security_level.edit(zone_id=zone_id, value='essentially_off')
-            app.logger.debug(response)
-            messages.append({'status': 'SUCCESS!', 'message': f'Zone "{zone_name}" security level was changed to "essentially_off"'})
-        except Exception as e:
-            messages.append({'status': 'ERROR!', 'message': e})
-        finally:
-            return render_template('response.html', messages=messages)
+        return render_template('response.html', messages=messages)
     else:
         flash('Authorization failed. Please, check Cloudflare API Token.')
         return redirect(url_for('api_token'))
@@ -170,22 +164,15 @@ def change_zone_security_level(zone_id):
 
 @app.route('/_change_zone_ipv6/<zone_id>')
 def change_zone_ipv6(zone_id):
-    zone_name = request.args.get('zone_name')
-
     # check for CF authorization with API Token saved into session
     client = check_authorization(session.get('api_token'))
 
     if client:
-        messages = []
+        # update DNS record proxied
+        response, messages = api_zones_settings_ipv6_edit(client, zone_id)
+        app.logger.debug(response)
 
-        try:
-            response = client.zones.settings.ipv6.edit(zone_id=zone_id, value='on')
-            app.logger.debug(response)
-            messages.append({'status': 'SUCCESS!', 'message': f'Zone "{zone_name}" IPv6 enabled'})
-        except Exception as e:
-            messages.append({'status': 'ERROR!', 'message': e})
-        finally:
-            return render_template('response.html', messages=messages)
+        return render_template('response.html', messages=messages)
     else:
         flash('Authorization failed. Please, check Cloudflare API Token.')
         return redirect(url_for('api_token'))
@@ -194,25 +181,16 @@ def change_zone_ipv6(zone_id):
 @app.route('/_change_dns_proxied/<dns_record_id>')
 def change_dns_proxied(dns_record_id):
     zone_id = request.args.get('zone_id')
-    content = request.args.get('content')
-    name = request.args.get('name')
-    type = request.args.get('type')
 
     # check for CF authorization with API Token saved into session
     client = check_authorization(session.get('api_token'))
 
     if client:
-        messages = []
+        # update DNS record proxied
+        response, messages = api_dns_records_edit_proxied(client, zone_id, dns_record_id)
+        app.logger.debug(response)
 
-        try:
-            response = client.dns.records.update(dns_record_id=dns_record_id, zone_id=zone_id, content=content, name=name, type=type, proxied=True)
-            app.logger.debug(response)
-            messages.append({'status': 'SUCCESS!', 'message': f'DNS {type} record "{name}" Proxied status was changed to "True"'})
-        except Exception as e:
-            app.logger.debug(e)
-            messages.append({'status': 'ERROR!', 'message': e})
-        finally:
-            return render_template('response.html', messages=messages)
+        return render_template('response.html', messages=messages)
     else:
         flash('Authorization failed. Please, check Cloudflare API Token.')
         return redirect(url_for('api_token'))
@@ -242,10 +220,10 @@ def copy_dns_a_to_aaaa():
                     try:
                         response = client.dns.records.create(zone_id=zone_id, content=ipv6_address, name=dns_record['name'], type='AAAA', proxied=True)
                         app.logger.debug(response)
-                        messages.append({'status': 'SUCCESS!', 'message': f'DNS {dns_record["type"]} record "{dns_record["name"]}" was copied to AAAA IPv6 record'})
+                        messages.append({'status': 'SUCCESS', 'message': f'DNS {dns_record["type"]} record "{dns_record["name"]}" was copied to AAAA IPv6 record'})
                     except Exception as e:
                         app.logger.debug(e)
-                        messages.append({'status': 'ERROR!', 'message': e})
+                        messages.append({'status': 'ERROR', 'message': e})
 
             return render_template('response.html', messages=messages)
 
@@ -258,28 +236,19 @@ def copy_dns_a_to_aaaa():
         return redirect(url_for('index'))
 
 
-@app.route('/_dns_record_delete')
-def dns_record_delete():
+@app.route('/_dns_record_delete/<dns_record_id>')
+def dns_record_delete(dns_record_id):
     zone_id = request.args.get('zone_id')
-    dns_record_id = request.args.get('dns_record_id')
-    name = request.args.get('name')
-    type = request.args.get('type')
 
     # check for CF authorization with API Token saved into session
     client = check_authorization(session.get('api_token'))
 
     if client:
-        messages = []
+        # delete DNS record
+        response, messages = api_dns_records_delete(client, zone_id, dns_record_id)
+        app.logger.debug(response)
 
-        try:
-            response = client.dns.records.delete(zone_id=zone_id, dns_record_id=dns_record_id)
-            app.logger.debug(response)
-            messages.append({'status': 'SUCCESS!', 'message': f'DNS record {type} "{name}" was deleted'})
-        except Exception as e:
-            app.logger.debug(e)
-            messages.append({'status': 'ERROR!', 'message': e})
-        finally:
-            return render_template('response.html', messages=messages)
+        return render_template('response.html', messages=messages)
     else:
         flash('Authorization failed. Please, check Cloudflare API Token.')
         return redirect(url_for('api_token'))

@@ -57,3 +57,88 @@ def check_authorization(api_token):
         return False
 
     return client
+
+
+def api_dns_records_delete(client, zone_id, dns_record_id):
+    # messages for showing errors in response template
+    messages = []
+
+    try:
+        # get DNS record
+        dns_record_details = client.dns.records.get(zone_id=zone_id, dns_record_id=dns_record_id)
+        app.logger.debug(dns_record_details)
+        # delete DNS record
+        response = client.dns.records.delete(zone_id=zone_id, dns_record_id=dns_record_id)
+        # append response message to messages list
+        messages.append({'status': 'SUCCESS', 'message': f'DNS {dns_record_details.type} record "{dns_record_details.name}" was deleted'})
+    except Exception as e:
+        # get error response
+        response = e
+        # append response message to messages list
+        messages.append({'status': 'ERROR', 'message': e})
+
+    return response, messages
+
+
+def api_dns_records_edit_proxied(client, zone_id, dns_record_id):
+    # messages for showing errors in response template
+    messages = []
+
+    try:
+        # get DNS record
+        dns_record_details = client.dns.records.get(zone_id=zone_id, dns_record_id=dns_record_id)
+        app.logger.debug(dns_record_details)
+        # edit (update) DNS record proxied
+        response = client.dns.records.edit(dns_record_id=dns_record_id, zone_id=zone_id, content=dns_record_details.content, name=dns_record_details.name, type=dns_record_details.type, proxied=True)
+        # append response message to messages list
+        messages.append({'status': 'SUCCESS', 'message': f'DNS {dns_record_details.type} record "{dns_record_details.name}" proxied status was changed to "True"'})
+    except Exception as e:
+        # get error response
+        response = e
+        # append response message to messages list
+        messages.append({'status': 'ERROR', 'message': e})
+
+    return response, messages
+
+
+def api_zones_settings_ipv6_edit(client, zone_id):
+    # messages for showing errors in response template
+    messages = []
+
+    try:
+        # get zone settings
+        zone_details = client.zones.get(zone_id=zone_id)
+        app.logger.debug(zone_details)
+        # edit zone settings IPv6
+        response = client.zones.settings.ipv6.edit(zone_id=zone_id, value='on')
+        # append response message to messages list
+        messages.append({'status': 'SUCCESS', 'message': f'Zone "{zone_details.name}" settings IPv6 was changed to "on"'})
+    except Exception as e:
+        # get error response
+        response = e
+        # append response message to messages list
+        messages.append({'status': 'ERROR', 'message': e})
+
+    return response, messages
+
+
+def api_zones_settings_security_level_edit(client, zone_id):
+    # messages for showing errors in response template
+    messages = []
+
+    try:
+        # get zone settings
+        zone_details = client.zones.get(zone_id=zone_id)
+        app.logger.debug(zone_details)
+        # edit zone settings security level
+        value = 'essentially_off'
+        response = client.zones.settings.security_level.edit(zone_id=zone_id, value=value)
+        # append response message to messages list
+        messages.append({'status': 'SUCCESS', 'message': f'Zone "{zone_details.name}" settings security level was changed to "{value}"'})
+    except Exception as e:
+        # get error response
+        response = e
+        # append response message to messages list
+        messages.append({'status': 'ERROR', 'message': e})
+
+    return response, messages

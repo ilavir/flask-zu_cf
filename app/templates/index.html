@@ -20,8 +20,8 @@
                 <h2>{{ zone.name }}</h2>
             </div>
             <div class="col text-end">
-                <strong>Security level</strong>: <a href="{{ url_for('change_zone_security_level', zone_id=zone.id, zone_name=zone.name) }}">{{ zone.security_level }}</a><br>
-                <strong>IPv6</strong>: <a href="{{ url_for('change_zone_ipv6', zone_id=zone.id, zone_name=zone.name) }}">{{ zone.ipv6 }}</a>
+                <strong>Security level</strong>: <a href="{{ url_for('change_zone_security_level', zone_id=zone.id) }}">{{ zone.security_level }}</a><br>
+                <strong>IPv6</strong>: <a href="{{ url_for('change_zone_ipv6', zone_id=zone.id) }}">{{ zone.ipv6 }}</a>
             </div>
         </div>
     </div>
@@ -46,8 +46,8 @@
                             <td>{{ dns.type }}</td>
                             <td>{{ dns.name }}</td>
                             <td>{{ dns.content }}</td>
-                            <td><a href="{{ url_for('change_dns_proxied', dns_record_id=dns.id, zone_id=zone.id, content=dns.content, name=dns.name, type=dns.type) }}">{{ dns.proxied }}</a></td>
-                            <td><a href="{{ url_for('dns_record_delete', dns_record_id=dns.id, zone_id=zone.id, name=dns.name, type=dns.type) }}"><button class="btn btn-sm btn-danger">Delete</button></a></td>
+                            <td><a href="{{ url_for('change_dns_proxied', dns_record_id=dns.id, zone_id=zone.id) }}">{{ dns.proxied }}</a></td>
+                            <td><a href="{{ url_for('dns_record_delete', dns_record_id=dns.id, zone_id=zone.id) }}"><button class="btn btn-sm btn-danger">Delete</button></a></td>
                         </tr>
                         {% endfor %}
                     </tbody>
