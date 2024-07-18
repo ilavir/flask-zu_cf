@@ -12,7 +12,7 @@ users = {'test': {'password': 'test'}}
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('api_token'))
+        return redirect(url_for('profile'))
 
     form = LoginForm()
 
@@ -23,7 +23,7 @@ def login():
             user.id = username
             login_user(user, remember=form.remember_me.data)
 
-            return redirect(url_for('api_token'))
+            return redirect(url_for('profile'))
         else:
             flash('Invalid username or password')
             return redirect(url_for('login'))
@@ -40,9 +40,9 @@ def logout():
     return redirect(url_for('login'))
 
 
-@app.route('/api_token', methods=['GET', 'POST'])
+@app.route('/profile', methods=['GET', 'POST'])
 @login_required
-def api_token():
+def profile():
     # app.logger.debug(app.config['SECRET_KEY'])
     form = ApiTokenForm()
 
@@ -73,7 +73,7 @@ def api_token():
     else:
         cf_api_token = None
 
-    return render_template('api_token.html', title='API Token', form=form, api_token=cf_api_token)
+    return render_template('profile.html', form=form, api_token=cf_api_token)
 
 
 @app.route('/')
@@ -143,7 +143,7 @@ def index():
             'api_token': cf_api_token,
         }
 
-    return render_template('index.html', title='Dashboard', cf=cloudflare_info, form=form)
+    return render_template('index.html', cf=cloudflare_info, form=form)
 
 
 @app.route('/_change_zone_security_level/<zone_id>')
@@ -159,7 +159,7 @@ def change_zone_security_level(zone_id):
         return render_template('response.html', messages=messages)
     else:
         flash('Authorization failed. Please, check Cloudflare API Token.')
-        return redirect(url_for('api_token'))
+        return redirect(url_for('profile'))
 
 
 @app.route('/_change_zone_ipv6/<zone_id>')
@@ -175,7 +175,7 @@ def change_zone_ipv6(zone_id):
         return render_template('response.html', messages=messages)
     else:
         flash('Authorization failed. Please, check Cloudflare API Token.')
-        return redirect(url_for('api_token'))
+        return redirect(url_for('profile'))
 
 
 @app.route('/_change_dns_proxied/<dns_record_id>')
@@ -193,7 +193,7 @@ def change_dns_proxied(dns_record_id):
         return render_template('response.html', messages=messages)
     else:
         flash('Authorization failed. Please, check Cloudflare API Token.')
-        return redirect(url_for('api_token'))
+        return redirect(url_for('profile'))
 
 
 @app.route('/_copy_dns_a_to_aaaa', methods=['POST'])
@@ -216,7 +216,7 @@ def copy_dns_a_to_aaaa():
             return render_template('response.html', messages=messages)
         else:
             flash('Authorization failed. Please, check Cloudflare API Token.')
-            return redirect(url_for('api_token'))
+            return redirect(url_for('profile'))
 
     else:
         flash('Form data is invalid. Please, check form data.')
@@ -238,4 +238,4 @@ def dns_record_delete(dns_record_id):
         return render_template('response.html', messages=messages)
     else:
         flash('Authorization failed. Please, check Cloudflare API Token.')
-        return redirect(url_for('api_token'))
+        return redirect(url_for('profile'))
