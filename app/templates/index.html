@@ -1,74 +1,91 @@
 {% extends "base.html" %}
 {% block title %}Dashboard{% endblock %}
 {% block content %}
-    <!-- <h1>Hi, {{ current_user.id }}!</h1> -->
+<div class="container">
+    <div class="row">
+        <div class="col">
+            <h1 class="text-center">Dashboard</h1>
+            {% if session['account_id'] %}
+                <p>Zones: {{ cf.zones_count }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
 
-    <div class="container">
-        <div class="row">
-            <div class="col">
-                <h1 class="text-center">Dashboard</h1>
-                <p>{{ 'Zones: ' if session['account_id'] }}{{ cf.zones_count }}</p>
-                <!-- <p>Zones: {{ cf.zones_count }}</p> -->
+<div class="container">
+    <div class="row">
+        <div class="col">
+            <div class="accordion" id="accordionZones">
+                {% for zone in cf.zones %}
+                <div class="accordion-item">
+                    <!-- zone header -->
+                    <h2 class="accordion-header" id="heading_{{ zone.id }}">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_{{ zone.id }}" aria-expanded="true" aria-controls="collapse_{{ zone.id }}">
+                            <h2>{{ zone.name }}
+                                <span class="badge fs-6 rounded-pill text-bg-{{ 'secondary' if zone.security_level == 'essentially_off' else 'warning' }}">SL: {{ zone.security_level }}</span>
+                                <span class="badge fs-6 rounded-pill text-bg-{{ 'secondary' if zone.ipv6 == 'on' else 'warning' }}">IPv6: {{ zone.ipv6 }}</span>
+                            </h2>
+                        </button>
+                    </h2>
+                    <!-- /zone header -->
+
+                    <!-- zone details -->
+                    <div id="collapse_{{ zone.id }}" class="accordion-collapse collapse" aria-labelledby="heading_{{ zone.id }}" data-bs-parent="#accordionZones">
+                        <div class="accordion-body">
+                            <!-- <strong>DNS records: {{ zone.dns_count }}</strong> -->
+                            <div class="container g-0 mb-2">
+                                <div class="row">
+                                    <div class="col text-end">
+                                        <div class="btn-group" role="group" aria-label="Zone {{ zone.id }}">
+                                            <a href="{{ url_for('change_zone_security_level', zone_id=zone.id) }}" class="btn {{ 'btn-success' if zone.security_level == 'essentially_off' else 'btn-warning' }} text-nowrap" role="button">SL: {{ zone.security_level }}</a>
+                                            <a href="{{ url_for('change_zone_ipv6', zone_id=zone.id) }}" class="btn {{ 'btn-success' if zone.ipv6 == 'on' else 'btn-warning' }} text-nowrap" role="button">IPv6: {{ zone.ipv6 }}</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Type</th>
+                                            <th>Name</th>
+                                            <th>Content</th>
+                                            <th>Proxied</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for dns in zone.dns %}
+                                        <tr>
+                                            <td>{{ dns.type }}</td>
+                                            <td>{{ dns.name }}</td>
+                                            <td>{{ dns.content }}</td>
+                                            <td><a href="{{ url_for('change_dns_proxied', dns_record_id=dns.id, zone_id=zone.id) }}">{{ dns.proxied }}</a></td>
+                                            <td><a href="{{ url_for('dns_record_delete', dns_record_id=dns.id, zone_id=zone.id) }}"><button class="btn btn-sm btn-danger">Delete</button></a></td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <form action="{{ url_for('copy_dns_a_to_aaaa') }}" method="post">
+                                <input id="zone_id" name="zone_id" type="hidden" value="{{ zone.id }}">
+                                {{ form.hidden_tag() }}
+
+                                {{ form.ipv6_address.label }}
+                                {{ form.ipv6_address(size=32) }}
+                                {{ form.submit(class="btn btn-success") }}
+                            </form>
+
+                        </div>
+                    </div>
+                    <!-- /zone details -->
+
+                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
-
-    {% for zone in cf.zones %}
-    <div class="container">
-        <div class="row">
-            <div class="col">
-                <h2>{{ zone.name }}</h2>
-            </div>
-            <div class="col text-end">
-                <strong>Security level</strong>: <a href="{{ url_for('change_zone_security_level', zone_id=zone.id) }}">{{ zone.security_level }}</a><br>
-                <strong>IPv6</strong>: <a href="{{ url_for('change_zone_ipv6', zone_id=zone.id) }}">{{ zone.ipv6 }}</a>
-            </div>
-        </div>
-    </div>
-    <div class="container">
-        <div class="row">
-            <div class="col">
-                <strong>DNS records: {{ zone.dns_count }}</strong>
-
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Type</th>
-                            <th>Name</th>
-                            <th>Content</th>
-                            <th>Proxied</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for dns in zone.dns %}
-                        <tr>
-                            <td>{{ dns.type }}</td>
-                            <td>{{ dns.name }}</td>
-                            <td>{{ dns.content }}</td>
-                            <td><a href="{{ url_for('change_dns_proxied', dns_record_id=dns.id, zone_id=zone.id) }}">{{ dns.proxied }}</a></td>
-                            <td><a href="{{ url_for('dns_record_delete', dns_record_id=dns.id, zone_id=zone.id) }}"><button class="btn btn-sm btn-danger">Delete</button></a></td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    <div class="container">
-        <div class="row">
-            <div class="col">
-                <form action="{{ url_for('copy_dns_a_to_aaaa') }}" method="post">
-                    <input id="zone_id" name="zone_id" type="hidden" value="{{ zone.id }}">
-                    {{ form.hidden_tag() }}
-
-                    {{ form.ipv6_address.label }}
-                    {{ form.ipv6_address(size=32) }}
-                    {{ form.submit(class="btn btn-success") }}
-                </form>
-            </div>
-        </div>
-    </div>
-    {% endfor %}
-
+</div>
 {% endblock %}
