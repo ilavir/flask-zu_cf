@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Domains{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col">
+            <h1 class="text-center">Domains</h1>
+            {% if session['account_id'] %}
+                <p>Zones: </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row">
+        <div class="col">
+            <h2 class="text-center">Cloudflare</h2>
+        </div>
+    </div>
+</div>
+{% endblock %}

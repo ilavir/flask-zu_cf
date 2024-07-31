@@ -146,6 +146,15 @@ def index():
     return render_template('index.html', cf=cloudflare_info, form=form)
 
 
+@app.route('/domains')
+def domains():
+    # check for CF authorization with API Token saved into session
+    cf_api_token = session.get('api_token')
+    app.logger.debug(f'api_token: {cf_api_token}')
+    client = check_authorization(cf_api_token)
+
+    return render_template('domains.html', client=client)
+
 @app.route('/_change_zone_security_level/<zone_id>')
 def change_zone_security_level(zone_id):
     # check for CF authorization with API Token saved into session
